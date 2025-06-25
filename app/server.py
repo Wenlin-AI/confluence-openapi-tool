@@ -1,114 +1,96 @@
 from __future__ import annotations
 
-import os
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import httpx
+from pydantic import BaseModel, Field
 
-
-class Settings(BaseModel):
-    url: str
-    username: str
-    token: str
-    space_key: str
-    parent_page: Optional[str] = None
-    allowed_origins: Optional[str] = "*"
-
-
-def load_settings() -> Settings:
-    try:
-        return Settings(
-            url=os.environ["CONFLUENCE_URL"],
-            username=os.environ["CONFLUENCE_USERNAME"],
-            token=os.environ["CONFLUENCE_TOKEN"],
-            space_key=os.environ["CONFLUENCE_SPACE_KEY"],
-            parent_page=os.getenv("CONFLUENCE_PARENT_PAGE"),
-            allowed_origins=os.getenv("ALLOWED_ORIGINS", "*")
-        )
-    except KeyError as exc:
-        missing = exc.args[0]
-        raise RuntimeError(f"Missing required environment variable: {missing}")
+from app.confluence_client import ConfluenceClient
 
 
 class PageCreate(BaseModel):
     title: str
-    body: str
+    content: str
+    parent_id: Optional[str] = Field(None, description="Parent page ID")
 
 
 class PageUpdate(BaseModel):
-    title: Optional[str] = None
-    body: Optional[str] = None
+    title: Optional[str] = Field(None, description="New title")
+    content: Optional[str] = Field(None, description="New content in storage format")
 
 
 def create_app() -> FastAPI:
-    settings = load_settings()
-    app = FastAPI(title="Confluence OpenAPI Tool")
+    client = ConfluenceClient()
+    app = FastAPI(
+        title="Confluence toolset",
+        description=(
+            "This API toolset is created to provide AI agents with the ability to "
+            "work with confluence pages in limited scope. Scope is limited under "
+            "certain parent page and modifications work only under that page"
+        ),
+        version="0.0.1",
+    )
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.allowed_origins] if settings.allowed_origins != "*" else ["*"],
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-    async def get_client() -> httpx.AsyncClient:
-        auth = (settings.username, settings.token)
-        return httpx.AsyncClient(auth=auth, base_url=settings.url.rstrip("/") + "/wiki/rest/api")
+    @app.get("/pages", summary="List pages")
+    def list_pages():
+        return client.list_pages()
 
-    @app.get("/pages/{page_id}")
-    async def get_page(page_id: str):
-        async with await get_client() as client:
-            resp = await client.get(f"/content/{page_id}", params={"expand": "body.storage,version"})
-            if resp.status_code >= 400:
-                raise HTTPException(status_code=resp.status_code, detail=resp.text)
-            return resp.json()
+    @app.get("/pages/{page_id}", summary="Read page")
+    def read_page(page_id: str, include_children: bool = False):
+        return client.get_page_summary(page_id, include_children=include_children)
 
-    @app.get("/pages")
-    async def list_pages(limit: int = 25):
-        async with await get_client() as client:
-            resp = await client.get("/content", params={"type": "page", "spaceKey": settings.space_key, "limit": limit})
-            if resp.status_code >= 400:
-                raise HTTPException(status_code=resp.status_code, detail=resp.text)
-            return resp.json()
+    @app.post("/pages", summary="Create page")
+    def create_page(data: PageCreate):
+        return client.create_page(data.title, data.content, data.parent_id)
 
-    @app.post("/pages")
-    async def create_page(page: PageCreate):
-        payload = {
-            "type": "page",
-            "title": page.title,
-            "space": {"key": settings.space_key},
-            "body": {"storage": {"value": page.body, "representation": "storage"}},
-        }
-        if settings.parent_page:
-            payload["ancestors"] = [{"id": settings.parent_page}]
-        async with await get_client() as client:
-            resp = await client.post("/content", json=payload)
-            if resp.status_code >= 400:
-                raise HTTPException(status_code=resp.status_code, detail=resp.text)
-            return resp.json()
+    @app.put("/pages/{page_id}", summary="Update page")
+    def update_page(page_id: str, data: PageUpdate):
+        return client.update_page(page_id, data.title, data.content)
 
-    @app.put("/pages/{page_id}")
-    async def update_page(page_id: str, update: PageUpdate):
-        async with await get_client() as client:
-            current = await client.get(f"/content/{page_id}", params={"expand": "version"})
-            if current.status_code >= 400:
-                raise HTTPException(status_code=current.status_code, detail=current.text)
-            data = current.json()
-            version = data["version"]["number"] + 1
-            payload = {
-                "id": page_id,
-                "type": "page",
-                "title": update.title or data["title"],
-                "version": {"number": version},
-                "body": {"storage": {"value": update.body or data.get("body", {}).get("storage", {}).get("value", ""), "representation": "storage"}}
-            }
-            resp = await client.put(f"/content/{page_id}", json=payload)
-            if resp.status_code >= 400:
-                raise HTTPException(status_code=resp.status_code, detail=resp.text)
-            return resp.json()
+    @app.delete("/pages/{page_id}", summary="Delete page")
+    def remove_page(page_id: str):
+        client.delete_page(page_id)
+        return {"status": "deleted"}
+
+    @app.get("/search", summary="Search pages")
+    def search(cql: str, limit: int = 100):
+        return client.search(cql_query=cql, limit=limit)
+
+    @app.get(
+        "/pages/{page_id}/inline-comments",
+        summary="List inline comments for a page",
+    )
+    def list_inline_comments(page_id: str, body_format: str = "storage"):
+        return client.get_inline_comments(page_id, body_format=body_format)
+
+    @app.post(
+        "/inline-comments/{comment_id}/reply",
+        summary="Reply to an inline comment",
+    )
+    def reply_inline(comment_id: str, body: str):
+        return client.reply_inline_comment(comment_id, body)
+
+    @app.get(
+        "/pages/{page_id}/footer-comments",
+        summary="List footer comments for a page",
+    )
+    def list_footer_comments(page_id: str, body_format: str = "storage"):
+        return client.get_footer_comments(page_id, body_format=body_format)
+
+    @app.post(
+        "/pages/{page_id}/footer-comments",
+        summary="Add a footer comment to a page",
+    )
+    def add_footer_comment(page_id: str, body: str):
+        return client.add_footer_comment(page_id, body)
 
     return app
