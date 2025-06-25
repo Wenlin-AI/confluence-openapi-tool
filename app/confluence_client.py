@@ -294,3 +294,39 @@ class ConfluenceClient:
             },
         }
         return self._make_request(endpoint, method="POST", json=data)
+
+
+def _print_page_summary(page: Dict[str, Any]) -> None:
+    """Pretty print selected page summary fields."""
+    from pprint import pprint
+
+    pprint(page)
+
+
+def _print_pages(pages: List[Dict[str, Any]]) -> None:
+    """Pretty print a list of pages."""
+    from pprint import pprint
+
+    pprint(pages)
+
+
+def main() -> None:
+    """Run simple tests when executed as a script."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Test Confluence client")
+    parser.add_argument("--list", action="store_true", help="List pages")
+    parser.add_argument("--page-id", help="Show a single page summary")
+    args = parser.parse_args()
+
+    client = ConfluenceClient()
+
+    if args.page_id:
+        _print_page_summary(client.get_page_summary(args.page_id))
+    else:
+        pages = client.list_pages() if args.list or not args.page_id else []
+        _print_pages(pages)
+
+
+if __name__ == "__main__":
+    main()
