@@ -18,4 +18,4 @@ dependencies = [
 ]
 
 [project.scripts]
-confluence-openapi-tool = "confluence_openapi_tool.cli:entrypoint"
+confluence-openapi-tool = "app.cli:entrypoint"

@@ -4,7 +4,7 @@ import typer
 
 def main(host: str = "127.0.0.1", port: int = 8123) -> None:
     """Start Confluence OpenAPI Tool server."""
-    uvicorn.run("confluence_openapi_tool.server:create_app", host=host, port=port, factory=True)
+    uvicorn.run("app.server:create_app", host=host, port=port, factory=True)
 
 
 def entrypoint() -> None:

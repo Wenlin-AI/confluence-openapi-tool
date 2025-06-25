@@ -1,0 +1,65 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Check for Virtual Environment",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy", "Bypass",
+                "-Command",
+                "if (-not (Test-Path -LiteralPath \"${workspaceFolder}\\.venv\")) { cd \"${workspaceFolder}\"; python -m venv .venv; Write-Host 'Virtual environment created at root level.' } else { Write-Host 'Virtual environment already exists at root level.' }"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Install Dependencies",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy", "Bypass",
+                "-Command",
+                "& \"${workspaceFolder}\\.venv\\Scripts\\Activate.ps1\"; pip install -e ."
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "dependsOn": [
+                "Check for Virtual Environment"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Run API Server",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy", "Bypass",
+                "-Command",
+                "& \"${workspaceFolder}\\.venv\\Scripts\\Activate.ps1\"; $envFile = \"${workspaceFolder}\\.env\"; if (Test-Path $envFile) { Get-Content $envFile | ForEach-Object { if ($_ -match '^([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }; $host_var = if ([System.Environment]::GetEnvironmentVariable('HOST')) { [System.Environment]::GetEnvironmentVariable('HOST') } else { 'localhost' }; $port_var = if ([System.Environment]::GetEnvironmentVariable('PORT')) { [System.Environment]::GetEnvironmentVariable('PORT') } else { '8000' }; Write-Host \"--------------------------------------------------------\" -ForegroundColor Cyan; Write-Host \"Access API documentation from http://${host_var}:${port_var}/docs\" -ForegroundColor Green; Write-Host \"--------------------------------------------------------\" -ForegroundColor Cyan; } else { Write-Host \"No .env file found, using default values.\" -ForegroundColor Yellow; $host_var = 'localhost'; $port_var = '8000'; Write-Host \"--------------------------------------------------------\" -ForegroundColor Cyan; Write-Host \"Access API documentation from http://${host_var}:${port_var}/docs\" -ForegroundColor Green; Write-Host \"--------------------------------------------------------\" -ForegroundColor Cyan; }; python -m app.main"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "dependsOn": [
+                "Install Dependencies"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}
