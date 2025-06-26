@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 from fastapi import HTTPException
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn")
 if not logger.handlers:
     logging.basicConfig(level=logging.INFO)
 
