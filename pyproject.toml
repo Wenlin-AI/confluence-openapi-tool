@@ -21,3 +21,4 @@ dependencies = [
 
 [project.scripts]
 confluence-openapi-tools-server = "app.cli:entrypoint"
+
