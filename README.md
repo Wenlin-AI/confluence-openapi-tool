@@ -34,7 +34,7 @@ You can build an image straight from the GitHub repository:
 
 ```bash
 docker build -t confluence-openapi-tools-server \
-  https://github.com/Wenlin-AI/confluence-openapi-tool.git#main
+  https://github.com/Wenlin-AI/confluence-openapi-tools-server.git#main
 ```
 
 Run the container with your environment variables:
