@@ -23,7 +23,7 @@ Set the following environment variables (for example in a `.env` file):
 After installing, launch the server with the bundled CLI:
 
 ```bash
-confluence-openapi-tool --host 0.0.0.0 --port 8123
+confluence-openapi-tools-server --host 0.0.0.0 --port 8123
 ```
 
 Navigate to `http://localhost:8123/docs` to explore the API.
@@ -33,14 +33,14 @@ Navigate to `http://localhost:8123/docs` to explore the API.
 You can build an image straight from the GitHub repository:
 
 ```bash
-docker build -t confluence-openapi-tool \
+docker build -t confluence-openapi-tools-server \
   https://github.com/Wenlin-AI/confluence-openapi-tool.git#main
 ```
 
 Run the container with your environment variables:
 
 ```bash
-docker run --env-file .env -p 8123:8123 confluence-openapi-tool
+docker run --env-file .env -p 8123:8123 confluence-openapi-tools-server
 ```
 
 > **Warning**

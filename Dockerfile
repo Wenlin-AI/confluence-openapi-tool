@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir .
 
 EXPOSE 8123
 
-CMD ["confluence-openapi-tool", "--host", "0.0.0.0", "--port", "8123"]
+CMD ["confluence-openapi-tools-server", "--host", "0.0.0.0", "--port", "8123"]
