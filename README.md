@@ -1,4 +1,4 @@
-# Confluence OpenAPI Tool
+# Confluence OpenAPI Tools Server
 
 A minimal FastAPI wrapper for interacting with Confluence Cloud pages. The server exposes a small REST API that AI agents can call. It is packaged so you can install it directly from GitHub and start the service from the command line.
 
