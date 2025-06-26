@@ -5,7 +5,7 @@ A minimal FastAPI wrapper for interacting with Confluence Cloud pages. The serve
 ## Installation
 
 ```bash
-pip install git+https://github.com/Wenlin-AI/confluence-openapi-tool.git
+pip install git+https://github.com/Wenlin-AI/confluence-openapi-tools-server.git
 ```
 
 ## Configuration
