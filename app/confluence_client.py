@@ -1,13 +1,20 @@
 import os
+import logging
 from typing import Any, Dict, List, Optional
 
 import requests
 from fastapi import HTTPException
-from dotenv import load_dotenv
+logger = logging.getLogger("uvicorn")
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO)
+
+from dotenv import load_dotenv, find_dotenv
 import html2text
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file (search upward for .env)
+dotenv_path = find_dotenv()
+load_dotenv(dotenv_path)
+logger.debug("Loaded environment variables from %s", dotenv_path)
 
 
 class ConfluenceClient:
@@ -20,6 +27,14 @@ class ConfluenceClient:
         self.token = os.environ.get("CONFLUENCE_API_TOKEN") or os.environ.get("CONFLUENCE_TOKEN")
         self.space_key = os.environ.get("CONFLUENCE_SPACE_KEY")
         self.parent_page = os.environ.get("CONFLUENCE_PARENT_PAGE", None)
+
+        logger.debug(
+            "Env vars - URL: %s USERNAME: %s TOKEN_SET: %s",
+            self.url,
+            self.username,
+            bool(self.token),
+        )
+
         if not all([self.url, self.username, self.token]):
             raise RuntimeError(
                 "CONFLUENCE_URL, CONFLUENCE_USERNAME and CONFLUENCE_API_TOKEN (or CONFLUENCE_TOKEN) must be set"
@@ -57,6 +72,7 @@ class ConfluenceClient:
         json: Any = None,
     ) -> Dict[str, Any]:
         url = endpoint if endpoint.startswith("http") else f"{self.url}{endpoint}"
+        logger.debug("Request %s %s params=%s json=%s", method, url, params, json)
         response = self.session.request(method, url, params=params, json=json)
         if not response.ok:
             raise HTTPException(status_code=response.status_code, detail=response.text)
